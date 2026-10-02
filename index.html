@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Star Catcher</title>
+<style>
+:root{--bg:#f4f1ff;--fg:#1d1b3a;--card:#fff;--accent:#6c4cf1;--sky:#e6e0ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12112a;--fg:#f0eeff;--card:#1e1c40;--accent:#9b84ff;--sky:#0b0a20}}
+:root[data-theme="dark"]{--bg:#12112a;--fg:#f0eeff;--card:#1e1c40;--accent:#9b84ff;--sky:#0b0a20}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px;min-height:100vh}
+h1{margin:4px 0;font-size:1.6rem}
+p.sub{margin:0 0 12px;opacity:.75;text-align:center;font-size:.95rem}
+.hud{display:flex;justify-content:space-between;width:100%;max-width:360px;font-weight:600;margin-bottom:8px}
+.wrap{position:relative;width:100%;max-width:360px}
+canvas{width:100%;aspect-ratio:3/4;background:var(--sky);border-radius:16px;display:block;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(0,0,0,.45);border-radius:16px;color:#fff;text-align:center;padding:16px}
+.overlay.hide{display:none}
+button{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px 28px;font-size:1.05rem;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>⭐ Star Catcher</h1>
+<p class="sub">Catch stars, dodge bombs. Drag or use ← → keys.</p>
+<div class="hud"><span>Score: <b id="s">0</b></span><span>Best: <b id="b">0</b></span><span id="l">❤️❤️❤️</span></div>
+<div class="wrap">
+<canvas id="c" width="360" height="480"></canvas>
+<div class="overlay" id="ov"><h2 id="t" style="margin:0">Ready?</h2><div id="m">Catch ⭐, avoid 💣</div><button id="go">Play</button></div>
+</div>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d'),W=360,H=480;
+const $=id=>document.getElementById(id);
+let best=0;try{best=+localStorage.getItem('sc-best')||0}catch(e){}
+$('b').textContent=best;
+let p,items,score,lives,run,t,last,keys={};
+function start(){p={x:W/2,w:70};items=[];score=0;lives=3;t=0;run=true;last=performance.now();$('ov').classList.add('hide');hud();requestAnimationFrame(loop)}
+function hud(){$('s').textContent=score;$('l').textContent='❤️'.repeat(Math.max(lives,0))||'💔'}
+function end(){run=false;if(score>best){best=score;try{localStorage.setItem('sc-best',best)}catch(e){}$('b').textContent=best}
+$('t').textContent='Game over';$('m').textContent='You caught '+score+' stars';$('go').textContent='Play again';$('ov').classList.remove('hide')}
+function loop(n){if(!run)return;const d=Math.min((n-last)/16.7,3);last=n;t+=d;
+if(keys.ArrowLeft)p.x-=6*d;if(keys.ArrowRight)p.x+=6*d;p.x=Math.max(p.w/2,Math.min(W-p.w/2,p.x));
+if(Math.random()<(0.02+Math.min(t/60000,0.03))*d)items.push({x:20+Math.random()*(W-40),y:-20,v:2+Math.random()*1.5+t/1500,bomb:Math.random()<.22});
+for(const i of items){i.y+=i.v*d;
+if(i.y>H-50&&i.y<H-10&&Math.abs(i.x-p.x)<p.w/2+10){i.dead=true;if(i.bomb)lives--;else score++;hud()}
+else if(i.y>H+20){i.dead=true;if(!i.bomb){lives--;hud()}}}
+items=items.filter(i=>!i.dead);
+x.clearRect(0,0,W,H);x.font='28px serif';x.textAlign='center';
+for(const i of items)x.fillText(i.bomb?'💣':'⭐',i.x,i.y);
+x.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent');
+x.beginPath();x.roundRect(p.x-p.w/2,H-40,p.w,16,8);x.fill();
+if(lives<=0){end();return}requestAnimationFrame(loop)}
+function move(e){const r=cv.getBoundingClientRect();p&&(p.x=(e.clientX-r.left)/r.width*W)}
+cv.addEventListener('pointermove',move);cv.addEventListener('pointerdown',move);
+addEventListener('keydown',e=>{keys[e.key]=true});addEventListener('keyup',e=>{keys[e.key]=false});
+$('go').onclick=start;
+</script>
+</body>
+</html>
